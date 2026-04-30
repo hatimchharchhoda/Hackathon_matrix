@@ -82,7 +82,7 @@ def me():
     return success_response({
         'user': user.to_dict(),
         'zone': zone_data,
-        'states': user.zone.states if user.zone else [],
+        'states': [s.strip() for s in user.zone.states.split(',')] if user.zone and user.zone.states else [],
     })
 
 

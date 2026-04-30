@@ -23,7 +23,7 @@ class User(db.Model):
 
     # Relationships
     zone = db.relationship('Zone', back_populates='users', foreign_keys=[zone_id])
-    accounts_managed = db.relationship('Account', back_populates='sales_manager',
+    accounts_managed = db.relationship('Account', back_populates='sales_manager_rel',
                                        foreign_keys='Account.sales_manager_id', lazy='dynamic')
     accounts_created = db.relationship('Account', back_populates='created_by_user',
                                        foreign_keys='Account.created_by', lazy='dynamic')

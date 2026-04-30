@@ -9,8 +9,7 @@ class Zone(db.Model):
 
     zone_id = db.Column(db.Integer, primary_key=True)
     zone_name = db.Column(db.String(100), nullable=False)
-    # PostgreSQL ARRAY; SQLite stores as JSON string
-    _states = db.Column('states', db.Text, nullable=False, default='[]')
+    states = db.Column(db.String(500), nullable=False, default='')
     sales_office = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
@@ -20,27 +19,11 @@ class Zone(db.Model):
     accounts = db.relationship('Account', back_populates='zone', lazy='dynamic')
     si_partners = db.relationship('SIPartner', back_populates='zone', lazy='dynamic')
 
-    @property
-    def states(self):
-        if isinstance(self._states, list):
-            return self._states
-        try:
-            return json.loads(self._states or '[]')
-        except (ValueError, TypeError):
-            return []
-
-    @states.setter
-    def states(self, value):
-        if isinstance(value, list):
-            self._states = json.dumps(value)
-        else:
-            self._states = value or '[]'
-
     def to_dict(self):
         return {
             'zone_id': self.zone_id,
             'zone_name': self.zone_name,
-            'states': self.states,
+            'states': [s.strip() for s in self.states.split(',')] if self.states else [],
             'sales_office': self.sales_office,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }

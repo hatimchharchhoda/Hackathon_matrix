@@ -14,6 +14,7 @@ class Product(db.Model):
     # | 'Telecom' | 'Video Management Software' | 'Visitor Management' | 'Intrusion Alarm'
     category = db.Column(db.String(150))
     model_series = db.Column(db.String(150))
+    series = db.Column(db.String(150))
     deployment_type = db.Column(db.String(100))  # 'On-Premise' | 'Cloud' | 'Hybrid'
     resolution_mp = db.Column(db.Numeric(4, 1))
     is_stqc_er_compliant = db.Column(db.Boolean, default=False)
@@ -47,6 +48,7 @@ class Product(db.Model):
             'domain': self.domain,
             'category': self.category,
             'model_series': self.model_series,
+            'series': self.series,
             'deployment_type': self.deployment_type,
             'resolution_mp': float(self.resolution_mp) if self.resolution_mp else None,
             'is_stqc_er_compliant': self.is_stqc_er_compliant,

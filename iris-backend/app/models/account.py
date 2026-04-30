@@ -14,7 +14,10 @@ class Account(db.Model):
     state = db.Column(db.String(100), nullable=False)
     zone_id = db.Column(db.Integer, db.ForeignKey('zones.zone_id'), nullable=True)
     si_id = db.Column(db.Integer, db.ForeignKey('si_partners.si_id'), nullable=True)
+    si_name = db.Column(db.String(200))
+    vad_company = db.Column(db.String(200))
     sales_manager_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)
+    sales_manager = db.Column(db.String(200))
     address = db.Column(db.Text)
     pincode = db.Column(db.String(10))
     gstin = db.Column(db.String(20))
@@ -38,7 +41,7 @@ class Account(db.Model):
     # Relationships
     zone = db.relationship('Zone', back_populates='accounts')
     si_partner = db.relationship('SIPartner', back_populates='accounts')
-    sales_manager = db.relationship('User', back_populates='accounts_managed',
+    sales_manager_rel = db.relationship('User', back_populates='accounts_managed',
                                     foreign_keys=[sales_manager_id])
     created_by_user = db.relationship('User', back_populates='accounts_created',
                                       foreign_keys=[created_by])
@@ -64,7 +67,10 @@ class Account(db.Model):
             'state': self.state,
             'zone_id': self.zone_id,
             'si_id': self.si_id,
+            'si_name': self.si_name,
+            'vad_company': self.vad_company,
             'sales_manager_id': self.sales_manager_id,
+            'sales_manager': self.sales_manager,
             'address': self.address,
             'pincode': self.pincode,
             'gstin': self.gstin,
@@ -88,11 +94,11 @@ class Account(db.Model):
                 data['zone'] = self.zone.to_dict()
             if self.si_partner:
                 data['si_partner'] = self.si_partner.to_dict()
-            if self.sales_manager:
-                data['sales_manager'] = {
-                    'user_id': self.sales_manager.user_id,
-                    'full_name': self.sales_manager.full_name,
-                    'email': self.sales_manager.email,
+            if self.sales_manager_rel:
+                data['sales_manager_user'] = {
+                    'user_id': self.sales_manager_rel.user_id,
+                    'full_name': self.sales_manager_rel.full_name,
+                    'email': self.sales_manager_rel.email,
                 }
         return data
 

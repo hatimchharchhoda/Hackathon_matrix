@@ -80,33 +80,20 @@ export default function AccountDetail() {
               {account.zone_name && <span>Zone: <b className="text-body">{account.zone_name}</b></span>}
             </div>
             <div className="flex items-center gap-4 mt-1 text-[12px] text-muted flex-wrap">
+              {account.vad_company && <span>VAD: {account.vad_company}</span>}
               {account.si_name && <span>SI: {account.si_name}</span>}
-              {account.sales_manager_name && <span>SM: {account.sales_manager_name}</span>}
+              {account.sales_manager && <span>SM: {account.sales_manager}</span>}
               {account.last_visit_date && <span>Last visit: {formatDate(account.last_visit_date)}</span>}
             </div>
           </div>
           <div className="flex items-center gap-4 flex-shrink-0">
             <HealthRing score={account.health_score} size={64} showLabel />
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => setActiveTab('AI Market Analysis')}
-                className="px-4 py-2 rounded-lg border-[1.5px] border-matrix-cyan text-matrix-cyan text-sm font-medium hover:bg-cyan-50 transition-colors flex items-center gap-2"
-              >
-                ✦ AI Market Analysis
-              </button>
-              <button
-                onClick={() => setActiveTab('Proposal')}
-                className="btn-primary text-sm"
-              >
-                Generate Proposal
-              </button>
-              <button
-                onClick={() => setVisitModalOpen(true)}
-                className="btn-ghost text-sm"
-              >
-                <CalendarCheck size={14} /> Log Visit
-              </button>
-            </div>
+            <button
+              onClick={() => setVisitModalOpen(true)}
+              className="btn-ghost text-sm"
+            >
+              <CalendarCheck size={14} /> Log Visit
+            </button>
           </div>
         </div>
       </div>
@@ -168,7 +155,8 @@ function OverviewTab({
   const acc = account as {
     account_name: string; contact_name?: string; contact_phone?: string; contact_email?: string;
     website?: string; address?: string; gstin?: string; pan?: string; si_name?: string;
-    sales_manager_name?: string; notes?: string; health_score: number; health_status: 'Healthy' | 'At-Risk' | 'Critical';
+    vad_company?: string; sales_manager?: string; notes?: string; health_score: number;
+    health_status: 'Healthy' | 'At-Risk' | 'Critical';
     open_tickets_count: number; nearest_expiry?: string;
   };
 
@@ -190,8 +178,9 @@ function OverviewTab({
               { label: 'Website', icon: <Globe size={12} />, value: acc.website },
               { label: 'GSTIN', value: acc.gstin },
               { label: 'PAN', value: acc.pan },
+              { label: 'VAD Company', value: acc.vad_company },
               { label: 'SI Partner', value: acc.si_name },
-              { label: 'Sales Manager', value: acc.sales_manager_name },
+              { label: 'Sales Manager', value: acc.sales_manager },
             ].map(({ label, value, icon }) =>
               value ? (
                 <div key={label}>

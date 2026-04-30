@@ -1,5 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Dot } from 'recharts';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, AlertTriangle, Ticket, ShieldCheck } from 'lucide-react';
 import { useAccountHealth, useAccountHealthHistory, useRecalculateHealth } from '@/hooks/useHealth';
 import { HealthRing } from '@/components/common/HealthRing';
 import { StatusBadge } from '@/components/common/StatusBadge';
@@ -44,7 +44,34 @@ export function HealthTab({ accountId }: { accountId: number }) {
           )}
         </div>
 
-        {/* Breakdown */}
+        {/* Summary Cards */}
+        {h?.breakdown && (
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="p-4 rounded-xl bg-matrix-paleBlue/50 border border-border/50">
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldCheck size={16} className="text-matrix-blue" />
+                <span className="text-[11px] font-bold text-muted uppercase">Base Score</span>
+              </div>
+              <span className="text-2xl font-bold text-matrix-navy">{h.breakdown.base_score}</span>
+            </div>
+            <div className="p-4 rounded-xl bg-red-50/60 border border-red-100">
+              <div className="flex items-center gap-2 mb-2">
+                <Ticket size={16} className="text-health-red" />
+                <span className="text-[11px] font-bold text-muted uppercase">Open Tickets</span>
+              </div>
+              <span className="text-2xl font-bold text-health-red">{h.breakdown.ticket_count}</span>
+            </div>
+            <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-100">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={16} className="text-health-amber" />
+                <span className="text-[11px] font-bold text-muted uppercase">License Penalty</span>
+              </div>
+              <span className="text-2xl font-bold text-health-amber">−{h.breakdown.license_expiry_deduction}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Breakdown Table */}
         {h?.breakdown && (
           <div className="border border-border rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 bg-matrix-paleBlue/40 font-semibold text-[13px] text-matrix-navy border-b border-border">
@@ -53,28 +80,25 @@ export function HealthTab({ accountId }: { accountId: number }) {
             </div>
             <div className="px-4 py-2.5 flex items-center justify-between border-b border-border/50 text-sm">
               <span className="text-body">Base Score</span>
-              <span className="font-bold text-matrix-navy">+{h.breakdown.base_score}</span>
+              <span className="font-bold text-green-600">+{h.breakdown.base_score}</span>
             </div>
             {h.breakdown.deductions.map((d, i) => (
               <div key={i} className="px-4 py-2.5 flex items-center justify-between border-b border-border/50 text-sm">
-                <span className="text-body">— {d.reason}{d.product_name ? ` (${d.product_name})` : ''}</span>
-                <span className="font-semibold text-health-red">−{d.points}</span>
+                <span className="text-body">— {d.reason}</span>
+                <span className="font-semibold text-health-red">{d.points}</span>
               </div>
             ))}
+            {h.breakdown.deductions.length === 0 && (
+              <div className="px-4 py-4 text-center text-sm text-muted">
+                No deductions — account is in great health! ✅
+              </div>
+            )}
             <div className="px-4 py-3 flex items-center justify-between bg-matrix-paleBlue/40 text-[15px]">
               <span className="font-bold text-matrix-navy">Final Score</span>
               <span className="font-bold" style={{ color: getHealthColor(h.health_score) }}>
                 {h.health_score}
               </span>
             </div>
-            {h.breakdown.exclusions.length > 0 && (
-              <div className="px-4 py-3 border-t border-border">
-                <p className="text-[11px] font-bold text-muted uppercase mb-2">Excluded Items</p>
-                {h.breakdown.exclusions.map((e, i) => (
-                  <p key={i} className="text-[12px] text-muted italic">• {e.reason}{e.product_name ? ` — ${e.product_name}` : ''}</p>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>

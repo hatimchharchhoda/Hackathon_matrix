@@ -38,7 +38,7 @@ export function InstalledProductsTab({ accountId }: { accountId: number }) {
           <table className="w-full text-sm">
             <thead className="bg-matrix-paleBlue/60">
               <tr className="text-[11px] text-muted font-bold uppercase tracking-wide">
-                {['Product', 'Domain', 'Qty', 'Version', 'Install Date', 'License Expiry', 'Status', ''].map((h) => (
+                {['Product', 'Series', 'Domain', 'Qty', 'Version', 'Install Date', 'License Expiry', 'Status', ''].map((h) => (
                   <th key={h} className="text-left px-4 py-3">{h}</th>
                 ))}
               </tr>
@@ -47,10 +47,11 @@ export function InstalledProductsTab({ accountId }: { accountId: number }) {
               {products.map((p, i) => (
                 <tr key={p.install_id} className={`border-b border-border/50 ${i % 2 === 1 ? 'bg-matrix-paleBlue/20' : ''}`}>
                   <td className="px-4 py-3 font-semibold text-matrix-navy text-[13px]">{p.product_name}</td>
+                  <td className="px-4 py-3 text-body text-[13px]">{p.series ?? '—'}</td>
                   <td className="px-4 py-3"><ProductChip domain={p.domain} label={p.domain} /></td>
                   <td className="px-4 py-3 text-body">{p.quantity}</td>
                   <td className="px-4 py-3 text-body font-mono text-[12px]">{p.installed_version ?? '—'}</td>
-                  <td className="px-4 py-3 text-body">{formatDate(p.installation_date)}</td>
+                  <td className="px-4 py-3 text-body">{formatDate(p.install_date)}</td>
                   <td className={`px-4 py-3 text-[13px] ${expiryColor(p.license_expiry)}`}>{formatDate(p.license_expiry)}</td>
                   <td className="px-4 py-3">
                     <span className={`text-[12px] font-semibold ${licenseStatusColors[p.license_status] ?? 'text-body'}`}>

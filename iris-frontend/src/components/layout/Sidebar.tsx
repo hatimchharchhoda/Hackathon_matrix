@@ -21,7 +21,7 @@ const navItems: NavItem[] = [
   { to: '/tickets',        icon: <TicketCheck size={18} />,      label: 'Tickets' },
   { to: '/renewals',       icon: <RefreshCw size={18} />,        label: 'Renewals' },
   { to: '/releases',       icon: <Sparkles size={18} />,         label: 'Releases' },
-  { to: '/prospects/new',  icon: <UserPlus size={18} />,         label: 'Prospects' },
+  { to: '/prospect',       icon: <UserPlus size={18} />,         label: 'Prospects' },
 ];
 
 const adminItems: Omit<NavItem, 'children'>[] = [

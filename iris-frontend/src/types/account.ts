@@ -9,8 +9,9 @@ export interface Account {
   zone_name?: string;
   si_id?: number;
   si_name?: string;
+  vad_company?: string;
   sales_manager_id?: number;
-  sales_manager_name?: string;
+  sales_manager?: string;
   health_score: number;
   health_status: 'Healthy' | 'At-Risk' | 'Critical';
   open_tickets_count: number;

@@ -44,7 +44,8 @@ def create_zone():
     if not data.get('zone_name'):
         return error_response('VALIDATION_ERROR', 'zone_name is required', 400)
     zone = Zone(zone_name=data['zone_name'], sales_office=data.get('sales_office'))
-    zone.states = data.get('states', [])
+    states_data = data.get('states', [])
+    zone.states = ",".join(states_data) if isinstance(states_data, list) else str(states_data)
     db.session.add(zone)
     db.session.commit()
     return success_response(zone.to_dict(), message='Zone created', status_code=201)
@@ -64,7 +65,8 @@ def update_zone(zone_id):
     if 'zone_name' in data:
         zone.zone_name = data['zone_name']
     if 'states' in data:
-        zone.states = data['states']
+        states_data = data['states']
+        zone.states = ",".join(states_data) if isinstance(states_data, list) else str(states_data)
     if 'sales_office' in data:
         zone.sales_office = data['sales_office']
     db.session.commit()

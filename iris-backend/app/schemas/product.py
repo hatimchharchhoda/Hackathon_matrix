@@ -18,6 +18,7 @@ class ProductSchema(Schema):
     domain = fields.Str(required=True, validate=validate.OneOf(DOMAINS))
     category = fields.Str(allow_none=True)
     model_series = fields.Str(allow_none=True)
+    series = fields.Str(allow_none=True)
     deployment_type = fields.Str(allow_none=True, validate=validate.OneOf(DEPLOYMENT_TYPES + [None]))
     resolution_mp = fields.Decimal(as_string=True, allow_none=True)
     is_stqc_er_compliant = fields.Bool(load_default=False)

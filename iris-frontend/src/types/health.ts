@@ -6,23 +6,18 @@ export interface HealthDeduction {
   product_name?: string;
 }
 
-export interface HealthExclusion {
-  reason: string;
-  install_id: number;
-  product_name?: string;
-}
-
 export interface AccountHealth {
   account_id: number;
   health_score: number;
   health_status: 'Healthy' | 'At-Risk' | 'Critical';
   breakdown: {
     base_score: number;
+    total_deduction: number;
     deductions: HealthDeduction[];
-    exclusions: HealthExclusion[];
+    ticket_count: number;
+    license_expiry_deduction: number;
   };
   open_tickets: Ticket[];
-  last_visit_date?: string;
   recalculated_at: string;
 }
 

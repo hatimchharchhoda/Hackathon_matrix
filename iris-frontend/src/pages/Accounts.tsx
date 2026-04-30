@@ -183,7 +183,7 @@ export default function Accounts() {
               <table className="w-full text-sm">
                 <thead className="bg-matrix-paleBlue/60 sticky top-0">
                   <tr className="text-[11px] text-muted font-bold uppercase tracking-wide">
-                    {['Account', 'Industry', 'Zone/State', 'Health', 'Status', 'Products', 'Tickets', 'Nearest Expiry', 'SI Partner', ''].map((h) => (
+                    {['Account', 'Industry', 'Zone/State', 'Health', 'Status', 'VAD Company', 'Sales Manager', 'SI Partner', ''].map((h) => (
                       <th key={h} className="text-left px-4 py-3">{h}</th>
                     ))}
                   </tr>
@@ -218,21 +218,8 @@ export default function Accounts() {
                         <td className="px-4 py-3">
                           <StatusBadge status={acc.health_status} />
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            <ProductChip domain="Video Surveillance" count={1} />
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {acc.open_tickets_count > 0 ? (
-                            <span className="font-bold text-health-red">{acc.open_tickets_count}</span>
-                          ) : (
-                            <span className="text-muted">—</span>
-                          )}
-                        </td>
-                        <td className={`px-4 py-3 text-[13px] ${expiryColor(acc.nearest_expiry)}`}>
-                          {formatDate(acc.nearest_expiry)}
-                        </td>
+                        <td className="px-4 py-3 text-[13px] text-body">{acc.vad_company ?? '—'}</td>
+                        <td className="px-4 py-3 text-[13px] text-body">{acc.sales_manager ?? '—'}</td>
                         <td className="px-4 py-3 text-[13px] text-muted">{acc.si_name ?? '—'}</td>
                         <td className="px-4 py-3">
                           <button

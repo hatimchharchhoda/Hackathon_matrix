@@ -12,9 +12,13 @@ class InstalledProduct(db.Model):
                            nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('product_catalog.product_id'), nullable=False)
     sap_code = db.Column(db.String(100))
+    product_name = db.Column(db.String(300))
+    domain = db.Column(db.String(100))
+    category = db.Column(db.String(150))
+    series = db.Column(db.String(150))
     quantity = db.Column(db.Integer, nullable=False, default=1)
     installed_version = db.Column(db.String(50))
-    installation_date = db.Column(db.Date)
+    install_date = db.Column(db.Date)
     warranty_expiry = db.Column(db.Date)
     license_expiry = db.Column(db.Date)
     license_type = db.Column(db.String(100))  # 'Annual' | 'Multi-Year' | 'Perpetual' | 'None'
@@ -56,9 +60,13 @@ class InstalledProduct(db.Model):
             'account_id': self.account_id,
             'product_id': self.product_id,
             'sap_code': self.sap_code,
+            'product_name': self.product_name,
+            'domain': self.domain,
+            'category': self.category,
+            'series': self.series,
             'quantity': self.quantity,
             'installed_version': self.installed_version,
-            'installation_date': self.installation_date.isoformat() if self.installation_date else None,
+            'install_date': self.install_date.isoformat() if self.install_date else None,
             'warranty_expiry': self.warranty_expiry.isoformat() if self.warranty_expiry else None,
             'license_expiry': self.license_expiry.isoformat() if self.license_expiry else None,
             'license_type': self.license_type,

@@ -1,4 +1,30 @@
-"""Health score calculation service."""
+"""
+Health score service.
+
+Algorithm (out of 100):
+  Start at 100 and subtract:
+
+  TICKET PENALTY  (open + in-progress tickets)
+    1 ticket  → -10
+    2 tickets → -20
+    3 tickets → -30
+    4+ tickets → -40  (cap)
+
+  LICENSE EXPIRY PENALTY  (per installed product that has a license_expiry)
+    Already expired        → -40
+    Expires within 30 days → -25
+    Expires 31-90 days     → -15
+    Expires 91-180 days    →  -5
+    > 180 days             →   0
+    (cap total license penalty at -45 so one bad renewal doesn't crush score)
+
+  STATUS
+    score >= 75  → Healthy
+    score >= 45  → At-Risk
+    score <  45  → Critical
+    (override: any expired license  → Critical)
+    (override: any expiring < 30 d  → At-Risk minimum)
+"""
 import json
 import logging
 from datetime import date, timedelta
@@ -12,28 +38,25 @@ from app.models.health_score import HealthScoreLog
 
 logger = logging.getLogger(__name__)
 
-# ─── Thresholds ────────────────────────────────────────────────────────────────
 OPEN_TICKET_STATES = ('Open', 'In Progress')
-DISCONTINUED_GRACE_DAYS = 30
 
+# Ticket penalty table (capped)
+TICKET_PENALTY_TABLE = {1: 10, 2: 20, 3: 30}
+TICKET_PENALTY_CAP = 40
 
-def _is_excluded(ip: InstalledProduct, today: date) -> bool:
-    """Return True if this installed product should be excluded from health calc.
-
-    Excluded when:
-      license_status = 'Discontinued' AND license_expiry < (today - 30 days)
-    """
-    if ip.license_status != 'Discontinued':
-        return False
-    if ip.license_expiry is None:
-        return False
-    return ip.license_expiry < (today - timedelta(days=DISCONTINUED_GRACE_DAYS))
+# License expiry penalty windows (days_to_expiry -> deduction_points)
+LICENSE_WINDOWS = [
+    (0,   40, 'Expired license'),
+    (30,  25, 'Expires within 30 days'),
+    (90,  15, 'Expires within 90 days'),
+    (180,  5, 'Expires within 180 days'),
+]
+LICENSE_PENALTY_CAP = 45
 
 
 def calculate_health_breakdown(account_id: int) -> Dict[str, Any]:
     """
-    Compute health score for an account without persisting anything.
-    Returns a breakdown dict.
+    Compute health score without persisting. Returns a breakdown dict.
     """
     today = date.today()
     account = Account.query.get(account_id)
@@ -41,119 +64,77 @@ def calculate_health_breakdown(account_id: int) -> Dict[str, Any]:
         raise ValueError(f'Account {account_id} not found')
 
     installed_products = InstalledProduct.query.filter_by(account_id=account_id).all()
-    all_tickets = Ticket.query.filter(
+    open_tickets = Ticket.query.filter(
         Ticket.account_id == account_id,
         Ticket.status.in_(OPEN_TICKET_STATES)
     ).all()
 
     deductions = []
-    exclusions = []
     total_deduction = 0
 
-    # Identify excluded products
-    active_ips = []
-    for ip in installed_products:
-        if _is_excluded(ip, today):
-            exclusions.append({
-                'reason': f'Discontinued license ignored (expired >{DISCONTINUED_GRACE_DAYS} days)',
-                'install_id': ip.install_id,
-            })
-        else:
-            active_ips.append(ip)
-
-    # ── Open ticket deductions ──────────────────────────────────────────────
-    # Filter tickets belonging to non-excluded installed products
-    excluded_install_ids = {ip.install_id for ip in installed_products if _is_excluded(ip, today)}
-    active_tickets = [t for t in all_tickets
-                      if t.install_id is None or t.install_id not in excluded_install_ids]
-
-    open_count = len(active_tickets)
-    ticket_deduction = 0
+    # ── 1. Ticket Penalty ──────────────────────────────────────────────────
+    open_count = len(open_tickets)
+    ticket_penalty = TICKET_PENALTY_TABLE.get(open_count, TICKET_PENALTY_CAP if open_count > 3 else 0)
     if open_count > 0:
-        per_ticket = min(open_count, 3) * 8
-        ticket_deduction += per_ticket
-        if open_count > 3:
-            ticket_deduction += 20
         deductions.append({
-            'reason': f'{open_count} open ticket{"s" if open_count != 1 else ""}',
-            'points': -ticket_deduction,
+            'reason': f'{open_count} open/in-progress ticket{"s" if open_count != 1 else ""}',
+            'points': -ticket_penalty,
         })
-    total_deduction += ticket_deduction
+        total_deduction += ticket_penalty
 
-    # ── License expiry deductions ───────────────────────────────────────────
-    license_deduction = 0
-    for ip in active_ips:
-        if ip.license_expiry is None or ip.license_type in ('Perpetual', 'None', None):
+    # ── 2. License Expiry Penalty ──────────────────────────────────────────
+    license_total = 0
+    any_expired = False
+    any_expiring_soon = False
+
+    for ip in installed_products:
+        if ip.license_expiry is None:
             continue
-        days_to_expiry = (ip.license_expiry - today).days
-        product_name = ip.product.product_name if ip.product else f'product #{ip.product_id}'
-        if days_to_expiry < 0:
-            pts = 45
-            reason = f'Expired license ({product_name})'
-        elif days_to_expiry <= 30:
-            pts = 35
-            reason = f'License expiring in {days_to_expiry} days ({product_name})'
-        elif days_to_expiry <= 90:
-            pts = 20
-            reason = f'License expiring in {days_to_expiry} days ({product_name})'
-        elif days_to_expiry <= 180:
-            pts = 10
-            reason = f'License expiring in {days_to_expiry} days ({product_name})'
+        # Skip perpetual/no-license products
+        if ip.license_type in ('Perpetual', 'None', None):
+            # But still check if seeded with explicit expiry (treat as Annual)
+            if ip.license_type is None and ip.license_expiry is None:
+                continue
+
+        days = (ip.license_expiry - today).days
+        pname = ip.product_name or (ip.product.product_name if ip.product else f'#{ip.product_id}')
+
+        if days < 0:
+            pts = 40
+            reason = f'Expired: {pname} (expired {abs(days)} days ago)'
+            any_expired = True
+        elif days <= 30:
+            pts = 25
+            reason = f'Expiring in {days}d: {pname}'
+            any_expiring_soon = True
+        elif days <= 90:
+            pts = 15
+            reason = f'Expiring in {days}d: {pname}'
+        elif days <= 180:
+            pts = 5
+            reason = f'Expiring in {days}d: {pname}'
         else:
             continue
+
+        if license_total + pts > LICENSE_PENALTY_CAP:
+            pts = max(0, LICENSE_PENALTY_CAP - license_total)
+            if pts == 0:
+                break
+
         deductions.append({'reason': reason, 'points': -pts})
-        license_deduction += pts
-    total_deduction += license_deduction
+        license_total += pts
 
-    # ── Hardware/software age deduction ────────────────────────────────────
-    age_deducted = False
-    for ip in active_ips:
-        if age_deducted:
-            break
-        hardware_old = ip.hardware_age_years and float(ip.hardware_age_years) > 4
-        lifespan = ip.product.expected_lifespan_years if ip.product else 5
-        software_old = False
-        if ip.installation_date and lifespan:
-            age_years = (today - ip.installation_date).days / 365.25
-            software_old = age_years > lifespan
-        if hardware_old or software_old:
-            deductions.append({
-                'reason': f'Hardware age > 4 years or software outdated '
-                          f'({ip.product.product_name if ip.product else ""})',
-                'points': -10,
-            })
-            total_deduction += 10
-            age_deducted = True
+    total_deduction += license_total
 
-    # ── Engagement deduction ────────────────────────────────────────────────
-    engagement_threshold = today - timedelta(days=180)
-    if account.last_visit_date is None or account.last_visit_date < engagement_threshold:
-        days_since = (today - account.last_visit_date).days if account.last_visit_date else None
-        reason = (f'No visit in {days_since} days' if days_since
-                  else 'No visit recorded')
-        deductions.append({'reason': reason, 'points': -15})
-        total_deduction += 15
-
+    # ── 3. Final score & status ────────────────────────────────────────────
     final_score = max(0, 100 - total_deduction)
 
-    # ── Status determination ────────────────────────────────────────────────
-    any_expired_active = any(
-        ip for ip in active_ips
-        if ip.license_expiry and ip.license_expiry < today
-        and ip.license_type not in ('Perpetual', 'None', None)
-    )
-    any_expiring_soon = any(
-        ip for ip in active_ips
-        if ip.license_expiry
-        and 0 <= (ip.license_expiry - today).days < 30
-        and ip.license_type not in ('Perpetual', 'None', None)
-    )
-    if final_score < 40 or open_count > 3 or any_expired_active or any_expiring_soon:
+    if any_expired or final_score < 45:
         status = 'Critical'
-    elif final_score >= 70:
-        status = 'Healthy'
-    else:
+    elif any_expiring_soon or final_score < 75:
         status = 'At-Risk'
+    else:
+        status = 'Healthy'
 
     return {
         'account_id': account_id,
@@ -162,18 +143,19 @@ def calculate_health_breakdown(account_id: int) -> Dict[str, Any]:
         'health_status': status,
         'breakdown': {
             'base_score': 100,
+            'total_deduction': total_deduction,
             'deductions': deductions,
-            'exclusions': exclusions,
+            'ticket_count': open_count,
+            'license_expiry_deduction': license_total,
         },
-        'installed_products': [ip.to_dict(include_product=True) for ip in active_ips],
-        'open_tickets': [t.to_dict() for t in active_tickets],
-        'last_visit_date': account.last_visit_date.isoformat() if account.last_visit_date else None,
-        'recalculated_at': date.today().isoformat(),
+        'installed_products': [ip.to_dict(include_product=True) for ip in installed_products],
+        'open_tickets': [t.to_dict() for t in open_tickets],
+        'recalculated_at': today.isoformat(),
     }
 
 
 def recalculate_account_health(account_id: int, triggered_by: str = 'manual') -> dict:
-    """Recalculate health score, persist to DB, and log the change."""
+    """Recalculate, persist to DB, and audit-log the change."""
     account = Account.query.get(account_id)
     if not account:
         raise ValueError(f'Account {account_id} not found')
@@ -185,11 +167,9 @@ def recalculate_account_health(account_id: int, triggered_by: str = 'manual') ->
     new_score = breakdown['health_score']
     new_status = breakdown['health_status']
 
-    # Persist
     account.health_score = new_score
     account.health_status = new_status
 
-    # Audit log
     log = HealthScoreLog(
         account_id=account_id,
         score_before=score_before,
@@ -208,7 +188,7 @@ def recalculate_account_health(account_id: int, triggered_by: str = 'manual') ->
 
 
 def recalculate_all(zone_id: Optional[int] = None) -> List[dict]:
-    """Batch recalculate health scores for all accounts (optionally filtered by zone)."""
+    """Batch recalculate health scores for all (or zone-filtered) accounts."""
     query = Account.query.filter_by(is_deleted=False)
     if zone_id is not None:
         query = query.filter_by(zone_id=zone_id)
@@ -216,7 +196,7 @@ def recalculate_all(zone_id: Optional[int] = None) -> List[dict]:
     results = []
     for account in accounts:
         try:
-            result = recalculate_account_health(account.account_id, triggered_by='manual')
+            result = recalculate_account_health(account.account_id, triggered_by='batch')
             results.append({
                 'account_id': account.account_id,
                 'account_name': account.account_name,
