@@ -1,0 +1,38 @@
+# Python (Backend)
+iris-backend/__pycache__/
+iris-backend/*.py[cod]
+iris-backend/*$py.class
+iris-backend/.pytest_cache/
+iris-backend/.venv/
+iris-backend/venv/
+iris-backend/env/
+iris-backend/instance/
+iris-backend/.env
+iris-backend/*.db
+iris-backend/*.sqlite3
+
+# Node (Frontend)
+iris-frontend/node_modules/
+iris-frontend/dist/
+iris-frontend/dist-ssr/
+iris-frontend/*.local
+iris-frontend/.env
+iris-frontend/.env.local
+iris-frontend/.env.development.local
+iris-frontend/.env.test.local
+iris-frontend/.env.production.local
+iris-frontend/npm-debug.log*
+iris-frontend/yarn-debug.log*
+iris-frontend/yarn-error.log*
+
+# OS / Editor
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Project Specific
+*.log
+iris-backend/logs/
