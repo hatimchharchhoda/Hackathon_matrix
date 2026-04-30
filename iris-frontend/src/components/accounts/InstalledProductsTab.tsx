@@ -5,7 +5,10 @@ import { ProductChip } from '@/components/common/ProductChip';
 import { EmptyState } from '@/components/common/EmptyState';
 import { TableSkeleton } from '@/components/common/LoadingSkeleton';
 import { formatDate, expiryColor } from '@/lib/utils';
+import { ProductModal } from './ProductModal';
+import { useDeleteAccountProduct } from '@/hooks/useAccounts';
 import type { InstalledProduct } from '@/types/product';
+import { toast } from 'sonner';
 
 const licenseStatusColors: Record<string, string> = {
   Active: 'text-health-green',
@@ -16,13 +19,37 @@ const licenseStatusColors: Record<string, string> = {
 
 export function InstalledProductsTab({ accountId }: { accountId: number }) {
   const { data, isLoading } = useAccountProducts(accountId);
+  const deleteProduct = useDeleteAccountProduct(accountId);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<InstalledProduct | undefined>();
+
   const products: InstalledProduct[] = Array.isArray(data) ? data : (data as { data?: InstalledProduct[] })?.data ?? [];
+
+  const handleEdit = (p: InstalledProduct) => {
+    setEditingProduct(p);
+    setModalOpen(true);
+  };
+
+  const handleAdd = () => {
+    setEditingProduct(undefined);
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Are you sure you want to remove this product from the account?')) {
+      try {
+        await deleteProduct.mutateAsync(id);
+      } catch (err) {
+        // Error handled by mutation
+      }
+    }
+  };
 
   return (
     <div className="card p-0 overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-border">
         <h2 className="card-title">Installed Products</h2>
-        <button className="btn-primary text-sm"><Plus size={14} /> Add Product</button>
+        <button onClick={handleAdd} className="btn-primary text-sm"><Plus size={14} /> Add Product</button>
       </div>
       {isLoading ? (
         <TableSkeleton cols={7} rows={5} />
@@ -30,7 +57,7 @@ export function InstalledProductsTab({ accountId }: { accountId: number }) {
         <EmptyState
           title="No products installed"
           description="Add the first product to start tracking versions, expiry and health."
-          action={<button className="btn-primary text-sm"><Plus size={13} />Add Product</button>}
+          action={<button onClick={handleAdd} className="btn-primary text-sm"><Plus size={13} />Add Product</button>}
           className="py-12"
         />
       ) : (
@@ -58,10 +85,16 @@ export function InstalledProductsTab({ accountId }: { accountId: number }) {
                       {p.license_status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button className="p-1 hover:text-matrix-blue"><Edit2 size={13} /></button>
-                      <button className="p-1 hover:text-health-red"><Trash2 size={13} /></button>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => handleEdit(p)} className="p-1 hover:text-matrix-blue transition-colors"><Edit2 size={14} /></button>
+                      <button 
+                        onClick={() => handleDelete(p.install_id)} 
+                        disabled={deleteProduct.isPending}
+                        className="p-1 hover:text-health-red transition-colors disabled:opacity-30"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -70,6 +103,12 @@ export function InstalledProductsTab({ accountId }: { accountId: number }) {
           </table>
         </div>
       )}
+      <ProductModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        accountId={accountId}
+        product={editingProduct}
+      />
     </div>
   );
 }

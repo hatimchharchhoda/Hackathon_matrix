@@ -13,10 +13,11 @@ from .release_match import ReleaseMatch
 from .agent_run import AgentRun
 from .visit_log import VisitLog
 from .product_knowledge_base import ProductKnowledgeBase
+from .notification import Notification
 
 __all__ = [
     'Zone', 'User', 'SIPartner', 'Account', 'Product',
     'InstalledProduct', 'Ticket', 'HealthScoreLog', 'Renewal',
     'SoftwareRelease', 'ReleaseMatch', 'AgentRun', 'VisitLog',
-    'ProductKnowledgeBase',
+    'ProductKnowledgeBase', 'Notification',
 ]

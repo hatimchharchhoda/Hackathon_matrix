@@ -6,6 +6,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useZones } from '@/hooks/useAdmin';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { NotificationDropdown } from './NotificationDropdown';
 
 export function TopBar() {
   const navigate = useNavigate();
@@ -106,10 +107,7 @@ export function TopBar() {
       <div className="flex-1" />
 
       {/* Notifications */}
-      <button className="relative p-2 rounded-lg hover:bg-matrix-paleBlue transition-colors">
-        <Bell size={18} className="text-body" />
-        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-health-red rounded-full" />
-      </button>
+      <NotificationDropdown />
 
       {/* User menu */}
       <div className="relative" ref={userMenuRef}>

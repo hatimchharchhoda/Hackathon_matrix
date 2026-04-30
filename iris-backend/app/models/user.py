@@ -27,6 +27,7 @@ class User(db.Model):
                                        foreign_keys='Account.sales_manager_id', lazy='dynamic')
     accounts_created = db.relationship('Account', back_populates='created_by_user',
                                        foreign_keys='Account.created_by', lazy='dynamic')
+    notifications = db.relationship('Notification', back_populates='user', lazy='dynamic')
     tickets_assigned = db.relationship('Ticket', back_populates='assigned_user',
                                        lazy='dynamic')
     agent_runs = db.relationship('AgentRun', back_populates='initiated_by_user',
@@ -51,6 +52,7 @@ class User(db.Model):
         }
         if include_zone and self.zone:
             data['zone'] = self.zone.to_dict()
+            data['zone_name'] = self.zone.zone_name
         return data
 
     def __repr__(self):

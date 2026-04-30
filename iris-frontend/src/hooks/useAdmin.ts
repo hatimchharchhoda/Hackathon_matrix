@@ -26,7 +26,7 @@ export function useCreateUser() {
 export function useUpdateUser(userId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: unknown) => api.put(`/admin/users/${userId}`, data),
+    mutationFn: (data: unknown) => api.patch(`/admin/users/${userId}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
       toast.success('User updated');
@@ -43,15 +43,37 @@ export function useZones() {
   });
 }
 
+export function useAdminZones() {
+  return useQuery({
+    queryKey: ['admin-zones'],
+    queryFn: () => api.get('/admin/zones').then((r) => r.data.data ?? r.data),
+    staleTime: 30_000,
+  });
+}
+
 export function useCreateZone() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: unknown) => api.post('/zones', data),
+    mutationFn: (data: unknown) => api.post('/admin/zones', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['zones'] });
+      qc.invalidateQueries({ queryKey: ['admin-zones'] });
       toast.success('Zone created');
     },
     onError: () => toast.error('Failed to create zone'),
+  });
+}
+
+export function useUpdateZone(zoneId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: unknown) => api.patch(`/admin/zones/${zoneId}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['zones'] });
+      qc.invalidateQueries({ queryKey: ['admin-zones'] });
+      toast.success('Zone updated');
+    },
+    onError: () => toast.error('Failed to update zone'),
   });
 }
 

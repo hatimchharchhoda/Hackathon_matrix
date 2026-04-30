@@ -42,7 +42,7 @@ export function useUpdateAccount(id: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Partial<CreateAccountPayload>) =>
-      api.put(`/accounts/${id}`, data),
+      api.patch(`/accounts/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.account(id) });
       qc.invalidateQueries({ queryKey: ['accounts'] });
@@ -55,6 +55,19 @@ export function useUpdateAccount(id: number) {
   });
 }
 
+export function useDeleteAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete(`/accounts/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Account deleted');
+    },
+    onError: () => toast.error('Failed to delete account'),
+  });
+}
+
 export function useAccountProducts(accountId: number | undefined) {
   return useQuery({
     queryKey: QUERY_KEYS.accountProducts(accountId!),
@@ -62,6 +75,55 @@ export function useAccountProducts(accountId: number | undefined) {
       api.get(`/accounts/${accountId}/products`).then((r) => r.data.data ?? r.data),
     enabled: !!accountId,
     staleTime: 30_000,
+  });
+}
+
+export function useAllProducts() {
+  return useQuery({
+    queryKey: ['products'],
+    queryFn: () => api.get('/products', { params: { per_page: 500 } }).then((r) => r.data.data ?? r.data),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useAddAccountProduct(accountId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.post(`/accounts/${accountId}/products`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.accountProducts(accountId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.account(accountId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.accountHealth(accountId) });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Product added to account');
+    },
+    onError: () => toast.error('Failed to add product'),
+  });
+}
+
+export function useUpdateAccountProduct(accountId: number, installId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.patch(`/accounts/${accountId}/products/${installId}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.accountProducts(accountId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.accountHealth(accountId) });
+      toast.success('Installed product updated');
+    },
+    onError: () => toast.error('Failed to update product'),
+  });
+}
+
+export function useDeleteAccountProduct(accountId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (installId: number) => api.delete(`/accounts/${accountId}/products/${installId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.accountProducts(accountId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.accountHealth(accountId) });
+      toast.success('Product removed from account');
+    },
+    onError: () => toast.error('Failed to remove product'),
   });
 }
 

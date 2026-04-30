@@ -1,11 +1,12 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Dot } from 'recharts';
-import { RefreshCcw, AlertTriangle, Ticket, ShieldCheck } from 'lucide-react';
+import { RefreshCcw, AlertTriangle, Ticket, ShieldCheck, History, ArrowRight } from 'lucide-react';
 import { useAccountHealth, useAccountHealthHistory, useRecalculateHealth } from '@/hooks/useHealth';
 import { HealthRing } from '@/components/common/HealthRing';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { EmptyState } from '@/components/common/EmptyState';
 import { getHealthColor } from '@/lib/healthUtils';
 import { formatDate, formatDateTime } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { AccountHealth, HealthHistoryEntry } from '@/types/health';
 
 export function HealthTab({ accountId }: { accountId: number }) {
@@ -19,7 +20,7 @@ export function HealthTab({ accountId }: { accountId: number }) {
   if (isLoading) return <div className="animate-pulse space-y-4"><div className="h-40 bg-matrix-paleBlue rounded-xl" /><div className="h-60 bg-matrix-paleBlue rounded-xl" /></div>;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 pb-10">
       {/* Score Card */}
       <div className="card">
         <div className="flex items-start justify-between mb-4">
@@ -103,37 +104,72 @@ export function HealthTab({ accountId }: { accountId: number }) {
         )}
       </div>
 
-      {/* History Chart */}
-      <div className="card">
-        <h2 className="card-title mb-4">Health Score History</h2>
-        {hist.length < 2 ? (
-          <EmptyState
-            title="No history yet"
-            description="Recalculate to start tracking health score over time."
-          />
-        ) : (
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={hist.map((h) => ({ ...h, date: formatDate(h.calculated_at) }))}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EEF5FD" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94A3B8' }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#94A3B8' }} />
-              <Tooltip
-                contentStyle={{ borderRadius: 8, border: '1px solid #C5D8EF', fontSize: 12 }}
-                formatter={(val: number) => [val, 'Health Score']}
-              />
-              <Line
-                type="monotone"
-                dataKey="health_score"
-                stroke="#1A6FE8"
-                strokeWidth={2}
-                dot={(props) => {
-                  const color = getHealthColor(props.payload.health_score);
-                  return <Dot key={props.key} {...props} fill={color} stroke={color} r={4} />;
-                }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
+      <div className="grid grid-cols-1 lg:grid-cols-[60%_40%] gap-6">
+        {/* History Chart */}
+        <div className="card">
+          <h2 className="card-title mb-4">Health Score History</h2>
+          {hist.length < 2 ? (
+            <EmptyState
+              title="No history yet"
+              description="Recalculate to start tracking health score over time."
+            />
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={hist.map((h) => ({ ...h, date: formatDate(h.calculated_at) })).reverse()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEF5FD" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94A3B8' }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#94A3B8' }} />
+                <Tooltip
+                  contentStyle={{ borderRadius: 8, border: '1px solid #C5D8EF', fontSize: 12 }}
+                  formatter={(val: number) => [val, 'Health Score']}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="health_score"
+                  stroke="#1A6FE8"
+                  strokeWidth={2}
+                  dot={(props) => {
+                    const color = getHealthColor(props.payload.health_score);
+                    return <Dot key={props.key} {...props} fill={color} stroke={color} r={4} />;
+                  }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Change Logs */}
+        <div className="card">
+          <h2 className="card-title mb-4 flex items-center gap-2">
+            <History size={18} className="text-matrix-blue" />
+            Change Logs
+          </h2>
+          <div className="space-y-3 overflow-y-auto max-h-[260px] pr-2">
+            {hist.map((entry, i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-matrix-paleBlue/30 transition-colors">
+                <div>
+                  <div className="text-[11px] font-bold text-muted uppercase tracking-wider">{formatDate(entry.calculated_at)}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[13px] font-bold text-matrix-navy">{entry.health_score}</span>
+                    <StatusBadge status={entry.health_status} className="scale-75 origin-left" />
+                  </div>
+                </div>
+                {i < hist.length - 1 && (
+                  <div className="flex flex-col items-end">
+                    <div className={cn(
+                      "text-[12px] font-bold flex items-center gap-1",
+                      entry.health_score > hist[i+1].health_score ? "text-health-green" : entry.health_score < hist[i+1].health_score ? "text-health-red" : "text-muted"
+                    )}>
+                      {entry.health_score > hist[i+1].health_score ? '+' : ''}{entry.health_score - hist[i+1].health_score}
+                    </div>
+                    <div className="text-[10px] text-muted">vs previous</div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {hist.length === 0 && <p className="text-center text-muted text-sm py-10">No logs found.</p>}
+          </div>
+        </div>
       </div>
     </div>
   );

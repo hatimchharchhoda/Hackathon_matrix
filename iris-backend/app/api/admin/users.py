@@ -105,6 +105,8 @@ def update_user(user_id):
     for field in ('role', 'zone_id', 'is_active', 'designation', 'phone'):
         if field in data:
             setattr(user, field, data[field])
+    if 'password' in data and data['password']:
+        user.password_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     user.updated_at = datetime.utcnow()
     db.session.commit()
     return success_response(user.to_dict(include_zone=True), message='User updated')

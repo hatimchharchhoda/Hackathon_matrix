@@ -92,6 +92,7 @@ class Account(db.Model):
         if include_relations:
             if self.zone:
                 data['zone'] = self.zone.to_dict()
+                data['zone_name'] = self.zone.zone_name
             if self.si_partner:
                 data['si_partner'] = self.si_partner.to_dict()
             if self.sales_manager_rel:

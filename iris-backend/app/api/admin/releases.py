@@ -47,9 +47,10 @@ def create_release():
     if err:
         return err
     data = request.get_json(silent=True) or {}
-    for f in ('product_name', 'new_version', 'release_date', 'release_title', 'match_criteria'):
-        if not data.get(f):
-            return error_response('VALIDATION_ERROR', f'{f} is required', 400)
+    match_criteria = data.get('match_criteria')
+    if not match_criteria:
+        # Default match criteria: match by product name
+        match_criteria = {'product_name': data['product_name']}
 
     release = SoftwareRelease(
         product_id=data.get('product_id'),
@@ -60,7 +61,7 @@ def create_release():
         release_date=date.fromisoformat(data['release_date']),
         release_title=data['release_title'],
         description=data.get('description'),
-        match_criteria=json.dumps(data['match_criteria']) if isinstance(data['match_criteria'], dict) else data['match_criteria'],
+        match_criteria=json.dumps(match_criteria) if isinstance(match_criteria, dict) else match_criteria,
         added_by=current_user.user_id,
     )
     release.highlights = data.get('highlights', [])

@@ -1,5 +1,5 @@
 """Installed products sub-blueprint (nested under /accounts/<id>/products)."""
-from datetime import datetime
+from datetime import datetime, date
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from app.extensions import db
@@ -48,23 +48,27 @@ def add_installed_product(account_id):
     if not product:
         return error_response('NOT_FOUND', 'Product not found', 404)
 
-    from datetime import date
     ip = InstalledProduct(
         account_id=account_id,
         product_id=data['product_id'],
         sap_code=data.get('sap_code') or product.sap_code,
+        product_name=product.product_name,
+        domain=product.domain,
+        category=product.category,
+        series=product.model_series,
         quantity=data.get('quantity', 1),
         installed_version=data.get('installed_version'),
-        installation_date=date.fromisoformat(data['installation_date']) if data.get('installation_date') else None,
+        install_date=date.fromisoformat(data['installation_date']) if data.get('installation_date') else None,
         warranty_expiry=date.fromisoformat(data['warranty_expiry']) if data.get('warranty_expiry') else None,
         license_expiry=date.fromisoformat(data['license_expiry']) if data.get('license_expiry') else None,
-        license_type=data.get('license_type'),
+        license_type=data.get('license_type') or product.license_type,
         site_location=data.get('site_location'),
         notes=data.get('notes'),
         added_by=current_user.user_id,
     )
     if data.get('serial_numbers'):
         ip.serial_numbers = data['serial_numbers']
+    
     db.session.add(ip)
     db.session.commit()
 
@@ -89,15 +93,26 @@ def update_installed_product(account_id, install_id):
         return error_response('NOT_FOUND', 'Installed product not found', 404)
 
     data = request.get_json(silent=True) or {}
-    from datetime import date
+    
     for field in ('installed_version', 'quantity', 'license_type', 'license_status',
                   'site_location', 'notes'):
         if field in data:
             setattr(ip, field, data[field])
-    for date_field in ('license_expiry', 'warranty_expiry', 'installation_date',
-                       'amc_start_date', 'amc_end_date'):
-        if date_field in data and data[date_field]:
-            setattr(ip, date_field, date.fromisoformat(data[date_field]))
+            
+    # Fix date fields - handle empty strings from frontend
+    date_map = {
+        'license_expiry': 'license_expiry',
+        'warranty_expiry': 'warranty_expiry',
+        'installation_date': 'install_date', # Map frontend field to backend column
+        'amc_start_date': 'amc_start_date',
+        'amc_end_date': 'amc_end_date'
+    }
+    
+    for req_key, db_col in date_map.items():
+        if req_key in data:
+            val = data[req_key]
+            setattr(ip, db_col, date.fromisoformat(val) if val else None)
+            
     if 'hardware_age_years' in data:
         ip.hardware_age_years = data['hardware_age_years']
     if 'serial_numbers' in data:

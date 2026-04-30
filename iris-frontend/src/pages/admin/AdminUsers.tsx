@@ -321,7 +321,7 @@ function ResetPasswordModal({ user, onClose }: { user: User | null; onClose: () 
     if (!user) return;
     setIsPending(true);
     try {
-      await api.put(`/admin/users/${user.user_id}`, { password: data.new_password });
+      await api.patch(`/admin/users/${user.user_id}`, { password: data.new_password });
       toast.success(`Password reset for ${user.full_name}`);
       reset();
       onClose();

@@ -48,7 +48,7 @@ export function useRecomputeReleaseMatches(releaseId: number) {
 export function useCreateRelease() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: unknown) => api.post('/releases', data),
+    mutationFn: (data: unknown) => api.post('/admin/releases', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['releases'] });
       toast.success('Release added');

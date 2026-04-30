@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Search, Download, Building2, X } from 'lucide-react';
-import { useAccounts } from '@/hooks/useAccounts';
+import { Plus, Search, Download, Building2, X, Trash2, Edit2 } from 'lucide-react';
+import { useAccounts, useDeleteAccount } from '@/hooks/useAccounts';
 import { useAuthStore } from '@/store/authStore';
 import { useZones } from '@/hooks/useAdmin';
 import { HealthRing } from '@/components/common/HealthRing';
@@ -38,6 +38,7 @@ export default function Accounts() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { role } = useAuthStore();
   const { data: zones } = useZones();
+  const deleteAccount = useDeleteAccount();
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [searchInput, setSearchInput] = useState(searchParams.get('search') ?? '');
@@ -78,6 +79,12 @@ export default function Accounts() {
   const clearFilters = () => {
     setSearchParams({});
     setSearchInput('');
+  };
+
+  const handleDelete = async (id: number, name: string) => {
+    if (window.confirm(`Are you sure you want to delete account "${name}"? This action cannot be undone.`)) {
+      await deleteAccount.mutateAsync(id);
+    }
   };
 
   const hasFilters = Array.from(searchParams.keys()).some((k) => k !== 'page');
@@ -222,12 +229,21 @@ export default function Accounts() {
                         <td className="px-4 py-3 text-[13px] text-body">{acc.sales_manager ?? '—'}</td>
                         <td className="px-4 py-3 text-[13px] text-muted">{acc.si_name ?? '—'}</td>
                         <td className="px-4 py-3">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/accounts/${acc.account_id}`); }}
-                            className="text-matrix-blue text-[12px] font-medium hover:underline whitespace-nowrap"
-                          >
-                            View →
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/accounts/${acc.account_id}`); }}
+                              className="text-matrix-blue text-[12px] font-medium hover:underline whitespace-nowrap"
+                            >
+                              View →
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(acc.account_id, acc.account_name); }}
+                              disabled={deleteAccount.isPending}
+                              className="p-1 text-muted hover:text-health-red transition-colors disabled:opacity-30"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </td>
                       </motion.tr>
                     );

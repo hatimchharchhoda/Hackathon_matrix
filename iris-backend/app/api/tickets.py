@@ -63,6 +63,7 @@ def create_ticket():
         category=data.get('category', 'Other'),
         raised_by=data.get('raised_by'),
         assigned_to=data.get('assigned_to'),
+        source=data.get('source', 'manual'),
     )
     db.session.add(ticket)
     db.session.commit()

@@ -38,3 +38,53 @@ export function useRunProspectAnalysis() {
     onError: () => toast.error('Analysis failed'),
   });
 }
+
+// ─── AI Agent Doc Analysis ───────────────────────────────────────────────────
+// Calls the external agentic AI server at 172.16.0.28:5000 directly.
+// Expects a .docx binary response; returns a Blob.
+export function useRunDocAnalysis() {
+  return useMutation({
+    mutationFn: async (payload: {
+      client_info: {
+        company_name: string;
+        industry: string;
+        company_size: string;
+        location: Record<string, unknown>;
+        budget_range?: string;
+      };
+      requirements: Array<{
+        category: string;
+        description: string;
+        priority: string;
+        technical_specs: Record<string, unknown>;
+        quantity_estimate?: number;
+      }>;
+    }) => {
+      //const AGENT_BASE = 'http://172.16.0.28:5001';
+      const AGENT_BASE = 'http://localhost:5001';
+
+      // Step 1: trigger the agent — it generates and saves the .docx on its machine
+      const chatRes = await fetch(`${AGENT_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!chatRes.ok) {
+        const text = await chatRes.text();
+        throw new Error(text || `Agent returned ${chatRes.status}`);
+      }
+
+      // Step 2: read the generated file directly from disk via the Vite dev-server
+      // middleware (GET /agent-doc/proposal.docx → reads the local filesystem path).
+      // No download endpoint on the agent server is needed.
+      const docRes = await fetch('/agent-doc/proposal.docx', {
+        cache: 'no-store', // always get the freshly generated file
+      });
+      if (!docRes.ok) {
+        throw new Error(`Could not read generated document (${docRes.status})`);
+      }
+      return docRes.blob();
+    },
+    onError: (err: Error) => toast.error(`AI Agent Error: ${err.message}`),
+  });
+}

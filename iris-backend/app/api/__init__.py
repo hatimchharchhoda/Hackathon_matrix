@@ -22,6 +22,7 @@ def register_blueprints(app: Flask) -> None:
     from .admin.users import admin_users_bp
     from .admin.zones import admin_zones_bp
     from .admin.releases import admin_releases_bp
+    from .notifications import notifications_bp
 
     # ── Accounts sub-blueprints (all registered at /api/accounts) ──────────────
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -33,6 +34,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(account_health_bp, url_prefix='/api/accounts')
     app.register_blueprint(account_renewals_bp, url_prefix='/api/accounts')
     app.register_blueprint(account_releases_bp, url_prefix='/api/accounts')
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
 
     # ── Top-level blueprints ───────────────────────────────────────────────────
     app.register_blueprint(tickets_bp, url_prefix='/api/tickets')

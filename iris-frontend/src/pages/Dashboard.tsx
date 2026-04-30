@@ -85,7 +85,7 @@ export default function Dashboard() {
           },
           {
             icon: <RefreshCw />, label: 'Renewals Due 30d',
-            value: s?.renewals_due_30d ?? 0, valueColor: 'text-health-red',
+            value: s?.renewals_due_30_days ?? 0, valueColor: 'text-health-red',
             iconBg: 'bg-red-50',
             onClick: () => navigate('/renewals?bucket=30'),
           },
@@ -97,13 +97,13 @@ export default function Dashboard() {
           },
           {
             icon: <Zap />, label: 'Upsell Opportunities',
-            value: s?.upsell_opportunities ?? 0, valueColor: 'text-matrix-cyan',
+            value: (s?.critical_accounts ?? 0) + (s?.at_risk_accounts ?? 0), valueColor: 'text-matrix-cyan',
             iconBg: 'bg-cyan-50',
             onClick: () => navigate('/accounts'),
           },
           {
             icon: <Sparkles />, label: 'Release Matches',
-            value: s?.release_matches ?? 0, valueColor: 'text-matrix-blue',
+            value: s?.releases_pending_review ?? 0, valueColor: 'text-matrix-blue',
             iconBg: 'bg-blue-50',
             onClick: () => navigate('/releases'),
           },

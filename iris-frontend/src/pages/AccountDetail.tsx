@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, MapPin, Building2, Phone, Mail, Globe, Edit2, CalendarCheck } from 'lucide-react';
-import { useAccount } from '@/hooks/useAccounts';
+import { ArrowLeft, MapPin, Building2, Phone, Mail, Globe, Edit2, CalendarCheck, Trash2 } from 'lucide-react';
+import { useAccount, useDeleteAccount } from '@/hooks/useAccounts';
 import { HealthRing } from '@/components/common/HealthRing';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
@@ -14,6 +14,7 @@ import { MarketAnalysisTab } from '@/components/accounts/MarketAnalysisTab';
 import { ProposalTab } from '@/components/accounts/ProposalTab';
 import { ReleasesTab } from '@/components/accounts/ReleasesTab';
 import { VisitLogModal } from '@/components/accounts/VisitLogModal';
+import { EditAccountModal } from '@/components/accounts/EditAccountModal';
 import { formatDate } from '@/lib/utils';
 
 const TABS = [
@@ -27,8 +28,24 @@ export default function AccountDetail() {
   const id = Number(accountId);
   const [activeTab, setActiveTab] = useState('Overview');
   const [visitModalOpen, setVisitModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   const { data: account, isLoading, isError, refetch } = useAccount(id);
+  const deleteAccount = useDeleteAccount();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('edit') === 'true') {
+      setEditModalOpen(true);
+    }
+  }, [searchParams]);
+
+  const handleDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete account "${account?.account_name}"? This cannot be undone.`)) {
+      await deleteAccount.mutateAsync(id);
+      navigate('/accounts');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -53,12 +70,22 @@ export default function AccountDetail() {
   return (
     <div className="space-y-5 pb-10">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted">
-        <Link to="/accounts" className="hover:text-matrix-blue transition-colors flex items-center gap-1">
-          <ArrowLeft size={14} /> Accounts
-        </Link>
-        <span>/</span>
-        <span className="text-body font-medium">{account.account_name}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <Link to="/accounts" className="hover:text-matrix-blue transition-colors flex items-center gap-1">
+            <ArrowLeft size={14} /> Accounts
+          </Link>
+          <span>/</span>
+          <span className="text-body font-medium">{account.account_name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+           <button onClick={() => setEditModalOpen(true)} className="btn-ghost text-sm border-border bg-white">
+             <Edit2 size={13} /> Edit
+           </button>
+           <button onClick={handleDelete} disabled={deleteAccount.isPending} className="btn-ghost text-sm border-border bg-white text-health-red hover:bg-red-50">
+             <Trash2 size={13} /> Delete
+           </button>
+        </div>
       </div>
 
       {/* Account Header */}
@@ -90,7 +117,7 @@ export default function AccountDetail() {
             <HealthRing score={account.health_score} size={64} showLabel />
             <button
               onClick={() => setVisitModalOpen(true)}
-              className="btn-ghost text-sm"
+              className="btn-primary text-sm shadow-lg shadow-matrix-blue/20"
             >
               <CalendarCheck size={14} /> Log Visit
             </button>
@@ -126,7 +153,7 @@ export default function AccountDetail() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
         >
-          {activeTab === 'Overview' && <OverviewTab account={account} onTabChange={setActiveTab} onLogVisit={() => setVisitModalOpen(true)} />}
+          {activeTab === 'Overview' && <OverviewTab account={account} onTabChange={setActiveTab} onEdit={() => setEditModalOpen(true)} />}
           {activeTab === 'Installed Products' && <InstalledProductsTab accountId={id} />}
           {activeTab === 'Tickets' && <TicketsTab accountId={id} />}
           {activeTab === 'Renewals' && <RenewalsTab accountId={id} />}
@@ -138,6 +165,7 @@ export default function AccountDetail() {
       </AnimatePresence>
 
       <VisitLogModal open={visitModalOpen} onClose={() => setVisitModalOpen(false)} accountId={id} />
+      <EditAccountModal open={editModalOpen} onClose={() => setEditModalOpen(false)} account={account} />
     </div>
   );
 }
@@ -146,11 +174,11 @@ export default function AccountDetail() {
 function OverviewTab({
   account,
   onTabChange,
-  onLogVisit,
+  onEdit,
 }: {
-  account: ReturnType<typeof useAccount>['data'];
+  account: any;
   onTabChange: (tab: string) => void;
-  onLogVisit: () => void;
+  onEdit: () => void;
 }) {
   const acc = account as {
     account_name: string; contact_name?: string; contact_phone?: string; contact_email?: string;
@@ -168,7 +196,7 @@ function OverviewTab({
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="card-title">Account Information</h2>
-            <button className="btn-ghost text-sm"><Edit2 size={13} /> Edit</button>
+            <button onClick={onEdit} className="btn-ghost text-sm"><Edit2 size={13} /> Edit</button>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             {[

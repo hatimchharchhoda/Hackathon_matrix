@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { TicketModal } from './TicketModal';
 import type { Ticket } from '@/types/ticket';
 
 const STATUSES = ['Open', 'In Progress', 'Resolved', 'Closed'];
@@ -20,6 +21,7 @@ const PRIORITY_BORDER: Record<string, string> = {
 export function TicketsTab({ accountId }: { accountId: number }) {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
   const { data, isLoading } = useAccountTickets(accountId);
   const tickets: Ticket[] = Array.isArray(data) ? data : [];
 
@@ -50,7 +52,7 @@ export function TicketsTab({ accountId }: { accountId: number }) {
             {['Critical', 'High', 'Medium', 'Low'].map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
-        <button className="btn-primary text-sm"><Plus size={14} /> Create Ticket</button>
+        <button onClick={() => setModalOpen(true)} className="btn-primary text-sm"><Plus size={14} /> Create Ticket</button>
       </div>
 
       {isLoading ? (
@@ -68,6 +70,11 @@ export function TicketsTab({ accountId }: { accountId: number }) {
           ))}
         </div>
       )}
+      <TicketModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        accountId={accountId}
+      />
     </div>
   );
 }
