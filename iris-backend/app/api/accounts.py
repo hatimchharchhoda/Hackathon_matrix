@@ -33,7 +33,11 @@ def list_accounts():
     if industry := request.args.get('industry'):
         query = query.filter(Account.industry == industry)
     if health_status := request.args.get('health_status'):
-        query = query.filter(Account.health_status == health_status)
+        if ',' in health_status:
+            statuses = [s.strip() for s in health_status.split(',')]
+            query = query.filter(Account.health_status.in_(statuses))
+        else:
+            query = query.filter(Account.health_status == health_status)
     if zone_id := request.args.get('zone_id'):
         query = query.filter(Account.zone_id == int(zone_id))
     if state := request.args.get('state'):

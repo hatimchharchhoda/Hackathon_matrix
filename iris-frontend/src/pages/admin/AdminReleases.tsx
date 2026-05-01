@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { Plus, ToggleLeft, ToggleRight, RefreshCcw } from 'lucide-react';
-import { useReleases, useCreateRelease, useRecomputeReleaseMatches } from '@/hooks/useReleases';
+import { useAdminReleases } from '@/hooks/useAdmin';
+import { useCreateRelease, useRecomputeReleaseMatches } from '@/hooks/useReleases';
 import { ProductChip } from '@/components/common/ProductChip';
 import { TableSkeleton } from '@/components/common/LoadingSkeleton';
+import { EmptyState } from '@/components/common/EmptyState';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import type { Release } from '@/types/release';
 
 export default function AdminReleases() {
   const [slideOver, setSlideOver] = useState(false);
-  const { data, isLoading } = useReleases({});
-  const releases: Release[] = Array.isArray(data) ? data : ((data as { items?: Release[] })?.items ?? []);
+  const { data, isLoading } = useAdminReleases({});
+  const releases: Release[] = Array.isArray(data) ? data : [];
 
   return (
     <div className="space-y-5">
@@ -24,6 +26,8 @@ export default function AdminReleases() {
       <div className="card p-0 overflow-hidden">
         {isLoading ? (
           <TableSkeleton cols={7} rows={6} />
+        ) : releases.length === 0 ? (
+          <EmptyState title="No releases found" description="Add a new software release to get started." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

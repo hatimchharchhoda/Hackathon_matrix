@@ -29,6 +29,7 @@ def list_zones():
     for z in zones:
         d = z.to_dict()
         d['sm_count'] = User.query.filter_by(zone_id=z.zone_id, role='Sales_manager').count()
+        d['accounts_count'] = Account.query.filter_by(zone_id=z.zone_id, is_deleted=False).count()
         result.append(d)
     return success_response(result)
 

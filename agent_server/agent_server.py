@@ -17,36 +17,20 @@ import json
 import socket
 from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
-from agent import run_agent
+from proposal_generation_agent import run_proposal_agent
+from market_research_agent import run_market_research
+
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-# API_KEY     = os.getenv("ANTHROPIC_API_KEY", "your_api_key_here")
-# MODEL       = "claude-sonnet-4-20250514"
-HOST        = "0.0.0.0"   # Listen on all interfaces → reachable across LAN
-PORT        = 5001
-# MAX_TOKENS  = 4096
+HOST = "0.0.0.0"   # Listen on all interfaces → reachable across LAN
+PORT = 5001
 
-# # Agent system prompt – customise freely
-# SYSTEM_PROMPT = """You are a helpful agentic AI assistant running on a local network server.
-# You can search the web, reason step-by-step, and complete multi-step tasks autonomously.
-# Always explain what you are doing and why."""
-
-# # ── Tools available to the agent ──────────────────────────────────────────────
-
-# TOOLS = [
-#     {
-#         "type": "web_search_20250305",
-#         "name": "web_search",
-#     }
-# ]
 
 # ── Flask app ─────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
 CORS(app)                           # Allow requests from any device on the LAN
-
-# client = anthropic.Anthropic(api_key=API_KEY)
 
 
 # ── Helper: get local IP ───────────────────────────────────────────────────────
@@ -61,80 +45,6 @@ def get_local_ip() -> str:
             return "127.0.0.1"
 
 
-# ── Agentic loop ───────────────────────────────────────────────────────────────
-
-# def run_agent(messages: list, max_iterations: int = 10) -> dict:
-#     """
-#     Runs the agentic loop:
-#       1. Send messages to Claude with tools enabled.
-#       2. If Claude calls a tool, execute it and feed the result back.
-#       3. Repeat until Claude returns a final text response or max_iterations hit.
-
-#     Returns a dict with 'response' (str) and 'iterations' (int).
-#     """
-#     iterations = 0
-
-#     while iterations < max_iterations:
-#         iterations += 1
-
-#         response = client.messages.create(
-#             model=MODEL,
-#             max_tokens=MAX_TOKENS,
-#             system=SYSTEM_PROMPT,
-#             tools=TOOLS,
-#             messages=messages,
-#         )
-
-#         # Append assistant message to history
-#         messages.append({"role": "assistant", "content": response.content})
-
-#         # ── Final answer ──────────────────────────────────────────────────────
-#         if response.stop_reason == "end_turn":
-#             text_parts = [
-#                 block.text
-#                 for block in response.content
-#                 if hasattr(block, "text")
-#             ]
-#             return {
-#                 "response": "\n".join(text_parts),
-#                 "iterations": iterations,
-#             }
-
-#         # ── Tool use ──────────────────────────────────────────────────────────
-#         if response.stop_reason == "tool_use":
-#             tool_results = []
-
-#             for block in response.content:
-#                 if block.type != "tool_use":
-#                     continue
-
-#                 print(f"  [Tool call] {block.name}({json.dumps(block.input)[:120]})")
-
-#                 # Web search is handled server-side by Anthropic – we just
-#                 # pass the result blocks back as tool_result messages.
-#                 tool_results.append({
-#                     "type": "tool_result",
-#                     "tool_use_id": block.id,
-#                     # The actual search is executed by the Anthropic backend;
-#                     # returning an empty content here tells the SDK to use the
-#                     # server-side result automatically.
-#                     "content": "",
-#                 })
-
-#             if tool_results:
-#                 messages.append({"role": "user", "content": tool_results})
-
-#             continue  # Next iteration
-
-#         # Unexpected stop reason – return whatever we have
-#         break
-
-#     return {
-#         "response": "Agent reached maximum iterations without a final answer.",
-#         "iterations": iterations,
-#     }
-
-
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.route("/", methods=["GET"])
@@ -146,54 +56,48 @@ def index():
         "message": "Agentic AI Server is live",
         "local_url": f"http://{local_ip}:{PORT}",
         "endpoints": {
-            "chat":     f"POST /chat     — send prospect data, generates document",
+            "generate proposal": f"GET /generate_proposal     — send prospect data, generates document",
+            "lateset info": f"GET /latest_info     — send prospect data, generates document",
             "download": f"GET  /download — fetch the generated proposal .docx",
-            "health":   f"GET  /health   — server health check",
+            "health": f"GET  /health   — server health check",
         },
     })
 
 
-# @app.route("/health", methods=["GET"])
-# def health():
-#     return jsonify({"status": "ok", "model": MODEL})
-
-
-@app.route("/chat", methods=["POST"])
-def chat():
-    """
-    Accepts JSON body:
-      {
-        "message": "Your question here",
-        "history": [                          ← optional conversation history
-          {"role": "user",      "content": "..."},
-          {"role": "assistant", "content": "..."}
-        ]
-      }
-
-    Returns:
-      {
-        "response":   "Agent's reply",
-        "iterations": 3,
-        "model":      "claude-sonnet-4-20250514"
-      }
-    """
-
+@app.route("/generate_proposal", methods=["POST"])
+def handle_generate_proposal():
     data = request.get_json(silent=True)
-    print(data)
+    print(f"Proposal request: {data}")
     if not data or "client_info" not in data:
-        return jsonify({"error": "Request body must include 'message'"}), 400
+        return jsonify({"error": "Request body must include 'client_info'"}), 400
 
     try:
-        result = run_agent(data)
-    
+        result = run_proposal_agent(data)
+        return jsonify({
+            "status": "success",
+            "data": result
+        })
     except Exception as exc:
+        print(f"Error in proposal: {exc}")
         return jsonify({"error": f"Internal error: {exc}"}), 500
 
-    print(f"[Done]")
 
-    return jsonify({
-        "response":   "200 OK"
-    })
+@app.route("/latest_info", methods=["POST"])
+def handle_latest_info():
+    data = request.get_json(silent=True)
+    print(f"Market analysis request: {data}")
+    if not data:
+        return jsonify({"error": "Request body is empty"}), 400
+
+    try:
+        result = run_market_research(data)
+        return jsonify({
+            "status": "success",
+            "data": result
+        })
+    except Exception as exc:
+        print(f"Error in research: {exc}")
+        return jsonify({"error": f"Internal error: {exc}"}), 500
 
 
 # ── Download the latest generated proposal ────────────────────────────────────

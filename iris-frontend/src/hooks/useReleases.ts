@@ -7,7 +7,7 @@ import type { ReleaseFilters } from '@/types/release';
 export function useReleases(filters: ReleaseFilters) {
   return useQuery({
     queryKey: QUERY_KEYS.releases(filters),
-    queryFn: () => api.get('/releases', { params: filters }).then((r) => r.data),
+    queryFn: () => api.get('/releases', { params: filters }).then((r) => r.data.data ?? r.data),
     staleTime: 60_000,
     placeholderData: keepPreviousData,
   });

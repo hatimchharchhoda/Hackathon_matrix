@@ -29,7 +29,6 @@ class GeminiClient:
             prompt,
             generation_config={
                 "temperature": temperature,
-                # "response_mime_type": "application/json"
             }
         )
 
@@ -344,13 +343,9 @@ Be specific and actionable. Don't invent specs not mentioned."""
 
         try:
             response = await self.client.generate_json(
-                # model="gemini-2.5-flash",
-                # max_tokens=2000,
                 prompt,
                 temperature=0,
-                # messages=[{"role": "user", "content": prompt}]
             )
-        #     parsed = json.loads(response)
             state['parsed_requirements'] = [
                 Requirement(**req) for req in response['requirements']
             ]
@@ -460,13 +455,9 @@ Select 5-10 products.""" # Might need to remove the limit of products here.
 
         try:
             response = await self.client.generate_json(
-                # model="gemini-2.5-flash",
-                # max_tokens=3000,
                 prompt,
                 temperature=0.3,
-                # messages=[{"role": "user", "content": prompt}]
             )
-        #     result = json.loads(response.recommendations)
 
             recommendations = []
             for rec in response['recommendations']:
@@ -474,7 +465,6 @@ Select 5-10 products.""" # Might need to remove the limit of products here.
                 
                 if product:
                     recommendations.append(ProductRecommendation(
-                        # product_id=rec['product_id'],
                         product_name=product['product_name'],
                         category=product['category'],
                         quantity=rec['quantity'],
@@ -489,7 +479,6 @@ Select 5-10 products.""" # Might need to remove the limit of products here.
             print(f" Product recommendation failed: {e}")
             return [
                 ProductRecommendation(
-                    # product_id=p['product_id'],
                     product_name=p['product_name'],
                     category=p['category'],
                     quantity=1,
@@ -661,11 +650,8 @@ Return ONLY valid JSON:
 
         try:
             response = await self.client.generate_json(
-                # model="gemini-2.5-flash",
-                # max_tokens=2000,
                 prompt,
                 temperature=0.7,
-                # messages=[{"role": "user", "content": prompt}]
             )
             
             return ClientInsight(
@@ -706,7 +692,7 @@ class PricingEngine:
             sla_tier=sla_tier
         )
         
-        print(f" Total Investment: ${total:,.2f}")
+        print(f" Total Investment: {total:,.2f}")
         return state
 
 
@@ -735,7 +721,7 @@ class ProposalGenerator:
         insights = state['client_insights']
         
         products_text = "\n".join([
-            f"- {p.product_name} (Qty: {p.quantity}) - ${p.unit_price:,.2f}\n  {p.justification}"
+            f"- {p.product_name} (Qty: {p.quantity}) - {p.unit_price:,.2f}\n  {p.justification}"
             for p in products
         ])
         
@@ -748,7 +734,7 @@ class ProposalGenerator:
 Products:
 {products_text}
 
-Pricing: ${pricing.total_investment:,.2f}
+Pricing: {pricing.total_investment:,.2f}
 
 Insights:
 {insights_text}
@@ -765,13 +751,9 @@ Return JSON with sections:
 
         try:
             response = await self.client.generate_json(
-                # model="gemini-2.5-flash",
-                # max_tokens=6000,
                 prompt,
                 temperature=0.7,
-                # messages=[{"role": "user", "content": prompt}]
             )
-        #     return json.loads(response.content[0].text)
             return response
         except Exception as e:
             return {"executive_summary": "Error generating proposal", "error": str(e)}
@@ -1025,9 +1007,7 @@ Packer.toBuffer(doc).then(buffer => {{
 async def main(data):
     """Main execution"""
     
-    import os
-    # api_key = os.getenv('GEMINI_API_KEY')
-    api_key = "AIzaSyAvixL2OEWi-fx7ZDyA0U3K9I4-rzqD0S4"
+    api_key = "AIzaSyB_fS4D5quym-3zYXqddfDAzpTljzHyFIA"
 
     if not api_key:
         print(" GEMINI_API_KEY not set")
@@ -1035,59 +1015,60 @@ async def main(data):
     
     orchestrator = ProposalOrchestrator(api_key)
     
-    client_details = data["client_info"]
-    client_requiremets = data["requirements"]
+    client_details = data.get("client_info", {})
+    client_requiremets = data.get("requirements", [])
+    
     initial_state: ProposalState = {
-        'client_info': ClientInfo(
-            company_name=client_details["company_name"],
-            industry=client_details["industry"],
-            company_size=client_details["company_size"],
-            location={"city": client_details["location"]["city"], "state": client_details["location"]["state"], "country": "India"},
-            budget_range=client_details["budget_range"]
+    'client_info': ClientInfo(
+        company_name=client_details["company_name"],
+        industry=client_details["industry"],
+        company_size=client_details["company_size"],
+        location={"city": client_details["location"]["city"], "state": client_details["location"]["state"], "country": "India"},
+        budget_range=client_details["budget_range"]
+    ),
+    'requirements': [
+        Requirement(
+            category=client_requiremets[0]["category"],
+            description=client_requiremets[0]["description"],
+            priority=client_requiremets[0]["priority"],
+            technical_specs=client_requiremets[0]["technical_specs"],
+            quantity_estimate=None
         ),
-        'requirements': [
-            Requirement(
-                category=client_requiremets[0]["category"],
-                description=client_requiremets[0]["description"],
-                priority=client_requiremets[0]["priority"],
-                technical_specs=client_requiremets[0]["technical_specs"],
-                quantity_estimate=None
-            ),
-            Requirement(
-                category="security",
-                description="Access control for 3 entry points with biometric authentication",
-                priority="high",
-                technical_specs={"entry_points": 3, "biometric": True},
-                quantity_estimate=3
-            ),
-            Requirement(
-                category="networking",
-                description="Network infrastructure for IP cameras and access control",
-                priority="high",
-                technical_specs={},
-                quantity_estimate=None
-            ),
-            Requirement(
-                category="telecom",
-                description="IP-based intercom for main entrance",
-                priority="medium",
-                technical_specs={"video": True, "locations": 1},
-                quantity_estimate=1
-            )
-        ],
-        'site_details': [
-            SiteDetails(
-                site_id="SITE-001",
-                coordinates={"lat": 30.2672, "lon": -97.7431},
-                area_sqm=5000,
-                zones=[
-                    {"name": "Warehouse", "type": "storage", "size": 3500},
-                    {"name": "Loading Dock", "type": "shipping", "size": 1000},
-                    {"name": "Office", "type": "admin", "size": 500}
-                ],
-                environment="indoor"
-            )
-        ],
+        Requirement(
+            category="security",
+            description="Access control for 3 entry points with biometric authentication",
+            priority="high",
+            technical_specs={"entry_points": 3, "biometric": True},
+            quantity_estimate=3
+        ),
+        Requirement(
+            category="networking",
+            description="Network infrastructure for IP cameras and access control",
+            priority="high",
+            technical_specs={},
+            quantity_estimate=None
+        ),
+        Requirement(
+            category="telecom",
+            description="IP-based intercom for main entrance",
+            priority="medium",
+            technical_specs={"video": True, "locations": 1},
+            quantity_estimate=1
+        )
+    ],
+    'site_details': [
+        SiteDetails(
+            site_id="SITE-001",
+            coordinates={"lat": 30.2672, "lon": -97.7431},
+            area_sqm=5000,
+            zones=[
+                {"name": "Warehouse", "type": "storage", "size": 3500},
+                {"name": "Loading Dock", "type": "shipping", "size": 1000},
+                {"name": "Office", "type": "admin", "size": 500}
+            ],
+            environment="indoor"
+        )
+    ],
         'parsed_requirements': None,
         'product_recommendations': None,
         'map_analysis': None,
@@ -1100,7 +1081,7 @@ async def main(data):
     
     final_state = await orchestrator.generate_proposal(initial_state)
     
-    if final_state['status'] == 'completed':
+    if final_state['status'] == 'completed' or final_state['proposal_content']:
         output_path = "C:/Users/hatim/.gemini/antigravity/scratch/agent_server/proposal_techcorp.docx"
         await render_docx(final_state, output_path)
         return output_path
@@ -1112,74 +1093,12 @@ async def main(data):
 
 
 # if __name__ == "__main__":
-def run_agent(client_details):
+def run_proposal_agent(client_details):
     result = asyncio.run(main(client_details))
     
     if result:
         print(f"\n{'='*60}")
-        print(f"SUCCESS! Proposal: {result}")
+        print(f"SUCCESS! Proposal generated at: {result}")
         print(f"{'='*60}")
-
-
-
-
-# initial_state: ProposalState = {
-#         'client_info': ClientInfo(
-#             company_name="TechCorp Industries",
-#             industry="Manufacturing",
-#             company_size="Mid-Market",
-#             location={"city": "Austin", "state": "TX", "country": "India"},
-#             budget_range="$50,000 - $100,000"
-#         ),
-#         'requirements': [
-#             Requirement(
-#                 category="security",
-#                 description="Need surveillance cameras for 5,000 sqm warehouse with 24/7 monitoring",
-#                 priority="critical",
-#                 technical_specs={"area": 5000, "monitoring": "24/7"},
-#                 quantity_estimate=None
-#             ),
-#             Requirement(
-#                 category="security",
-#                 description="Access control for 3 entry points with biometric authentication",
-#                 priority="high",
-#                 technical_specs={"entry_points": 3, "biometric": True},
-#                 quantity_estimate=3
-#             ),
-#             Requirement(
-#                 category="networking",
-#                 description="Network infrastructure for IP cameras and access control",
-#                 priority="high",
-#                 technical_specs={},
-#                 quantity_estimate=None
-#             ),
-#             Requirement(
-#                 category="telecom",
-#                 description="IP-based intercom for main entrance",
-#                 priority="medium",
-#                 technical_specs={"video": True, "locations": 1},
-#                 quantity_estimate=1
-#             )
-#         ],
-#         'site_details': [
-#             SiteDetails(
-#                 site_id="SITE-001",
-#                 coordinates={"lat": 30.2672, "lon": -97.7431},
-#                 area_sqm=5000,
-#                 zones=[
-#                     {"name": "Warehouse", "type": "storage", "size": 3500},
-#                     {"name": "Loading Dock", "type": "shipping", "size": 1000},
-#                     {"name": "Office", "type": "admin", "size": 500}
-#                 ],
-#                 environment="indoor"
-#             )
-#         ],
-#         'parsed_requirements': None,
-#         'product_recommendations': None,
-#         'map_analysis': None,
-#         'client_insights': None,
-#         'pricing': None,
-#         'proposal_content': None,
-#         'status': 'initialized',
-#         'errors': []
-#     }
+        return result
+    return None

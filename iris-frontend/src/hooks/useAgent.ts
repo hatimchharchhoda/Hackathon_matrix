@@ -40,51 +40,60 @@ export function useRunProspectAnalysis() {
 }
 
 // ─── AI Agent Doc Analysis ───────────────────────────────────────────────────
-// Calls the external agentic AI server at 172.16.0.28:5000 directly.
-// Expects a .docx binary response; returns a Blob.
+// Calls the external agentic AI server at port 5001.
 export function useRunDocAnalysis() {
   return useMutation({
-    mutationFn: async (payload: {
-      client_info: {
-        company_name: string;
-        industry: string;
-        company_size: string;
-        location: Record<string, unknown>;
-        budget_range?: string;
-      };
-      requirements: Array<{
-        category: string;
-        description: string;
-        priority: string;
-        technical_specs: Record<string, unknown>;
-        quantity_estimate?: number;
-      }>;
-    }) => {
-      //const AGENT_BASE = 'http://172.16.0.28:5001';
+    mutationFn: async (payload: any) => {
       const AGENT_BASE = 'http://localhost:5001';
 
-      // Step 1: trigger the agent — it generates and saves the .docx on its machine
-      const chatRes = await fetch(`${AGENT_BASE}/chat`, {
+      const res = await fetch(`${AGENT_BASE}/generate_proposal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!chatRes.ok) {
-        const text = await chatRes.text();
-        throw new Error(text || `Agent returned ${chatRes.status}`);
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Agent returned ${res.status}`);
       }
 
-      // Step 2: read the generated file directly from disk via the Vite dev-server
-      // middleware (GET /agent-doc/proposal.docx → reads the local filesystem path).
-      // No download endpoint on the agent server is needed.
-      const docRes = await fetch('/agent-doc/proposal.docx', {
-        cache: 'no-store', // always get the freshly generated file
-      });
+      // Step 2: download the generated file from the agent server
+      const docRes = await fetch(`${AGENT_BASE}/download`);
       if (!docRes.ok) {
-        throw new Error(`Could not read generated document (${docRes.status})`);
+        throw new Error(`Could not download generated document (${docRes.status})`);
       }
       return docRes.blob();
     },
     onError: (err: Error) => toast.error(`AI Agent Error: ${err.message}`),
+  });
+}
+
+// ─── AI Agent Market Analysis ────────────────────────────────────────────────
+export function useRunMarketAnalysis() {
+  return useMutation({
+    mutationFn: async (payload: {
+      company_name: string;
+      industry: string;
+      company_size: string;
+      location: { state: string; city: string };
+      budget_range: string;
+    }) => {
+      const AGENT_BASE = 'http://localhost:5001';
+
+      const res = await fetch(`${AGENT_BASE}/latest_info`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Agent returned ${res.status}`);
+      }
+
+      const json = await res.json();
+      return json.data;
+    },
+    onError: (err: Error) => toast.error(`Market Analysis Error: ${err.message}`),
   });
 }

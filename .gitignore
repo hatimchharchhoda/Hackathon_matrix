@@ -36,3 +36,13 @@ Thumbs.db
 # Project Specific
 *.log
 iris-backend/logs/
+
+# Agent Server
+agent_server/__pycache__/
+agent_server/*.py[cod]
+agent_server/*$py.class
+agent_server/.venv/
+agent_server/venv/
+agent_server/env/
+agent_server/.env
+agent_server/*.docx

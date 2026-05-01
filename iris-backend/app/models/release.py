@@ -66,7 +66,7 @@ class SoftwareRelease(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
         if include_match_count:
-            data['match_count'] = self.release_matches.count()
+            data['matched_accounts_count'] = self.release_matches.count()
         return data
 
     def __repr__(self):

@@ -105,17 +105,8 @@ def opportunities():
 
     items = []
 
-    # Health critical accounts
-    for a in accounts:
-        if a.health_status == 'Critical':
-            items.append({
-                'type': 'health_critical',
-                'account_id': a.account_id,
-                'account_name': a.account_name,
-                'message': f'Health score {a.health_score} — Critical status',
-                'priority': 'HIGH',
-                'due_date': None,
-            })
+    # Health critical accounts are already shown in the Accounts table on the dashboard
+    # to avoid redundancy, we only show event-driven alerts here
 
     # Renewals due soon
     if account_ids:
@@ -171,3 +162,52 @@ def opportunities():
     priority_order = {'HIGH': 0, 'MEDIUM': 1, 'LOW': 2}
     items.sort(key=lambda x: (priority_order.get(x['priority'], 3), x['due_date'] or '9999'))
     return success_response(items[:10])
+
+
+@dashboard_bp.route('/activity', methods=['GET'])
+@jwt_required()
+def activity():
+    from app.models.visit_log import VisitLog
+    current_user = get_current_user()
+
+    # Get recent visits scoped to zone
+    visit_query = db.session.query(VisitLog).join(Account).filter(Account.is_deleted == False)
+    if current_user.role == 'Sales_manager' and current_user.zone_id:
+        visit_query = visit_query.filter(Account.zone_id == current_user.zone_id)
+
+    recent_visits = visit_query.order_by(VisitLog.visit_date.desc()).limit(10).all()
+
+    # Get recent ticket updates
+    ticket_query = db.session.query(Ticket).join(Account).filter(Account.is_deleted == False)
+    if current_user.role == 'Sales_manager' and current_user.zone_id:
+        ticket_query = ticket_query.filter(Account.zone_id == current_user.zone_id)
+
+    recent_tickets = ticket_query.order_by(Ticket.updated_at.desc()).limit(10).all()
+
+    combined = []
+    for v in recent_visits:
+        combined.append({
+            'type': 'visit',
+            'id': v.visit_id,
+            'account_id': v.account_id,
+            'account_name': v.account.account_name,
+            'title': f'{v.visit_type} logged',
+            'subtitle': v.notes[:60] + '...' if v.notes and len(v.notes) > 60 else v.notes,
+            'date': v.visit_date.isoformat(),
+            'timestamp': v.created_at.isoformat()
+        })
+
+    for t in recent_tickets:
+        combined.append({
+            'type': 'ticket',
+            'id': t.ticket_id,
+            'account_id': t.account_id,
+            'account_name': t.account.account_name,
+            'title': f'Ticket #{t.ticket_id} updated',
+            'subtitle': f'Status: {t.status} | {t.title}',
+            'date': t.updated_at.date().isoformat(),
+            'timestamp': t.updated_at.isoformat()
+        })
+
+    combined.sort(key=lambda x: x['timestamp'], reverse=True)
+    return success_response(combined[:10])

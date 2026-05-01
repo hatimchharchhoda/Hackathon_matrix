@@ -11,7 +11,7 @@ import type { Release, ReleaseMatch } from '@/types/release';
 
 export default function Releases() {
   const { data, isLoading } = useReleases({});
-  const releases: Release[] = (data as { data?: Release[] })?.data ?? [];
+  const releases: Release[] = Array.isArray(data) ? data : [];
 
   return (
     <div className="space-y-5">

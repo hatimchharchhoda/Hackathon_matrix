@@ -4,7 +4,7 @@ import {
   Building2, AlertTriangle, TrendingDown, TicketCheck,
   RefreshCw, Heart, Zap, Sparkles, ArrowRight, RefreshCcw
 } from 'lucide-react';
-import { useDashboard, useDashboardOpportunities } from '@/hooks/useDashboard';
+import { useDashboard, useDashboardOpportunities, useDashboardActivity } from '@/hooks/useDashboard';
 import { useAccounts } from '@/hooks/useAccounts';
 import { KPICard } from '@/components/common/KPICard';
 import { HealthRing } from '@/components/common/HealthRing';
@@ -28,6 +28,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useDashboard();
   const { data: opportunities, isLoading: oppsLoading, refetch: refetchOpps } = useDashboardOpportunities();
+  const { data: activityData, isLoading: activityLoading, refetch: refetchActivity } = useDashboardActivity();
   const { data: accountsData, isLoading: accountsLoading } = useAccounts({
     health_status: 'Critical,At-Risk',
     sort_by: 'health_score',
@@ -38,6 +39,7 @@ export default function Dashboard() {
   const s = stats as Record<string, number> | undefined;
   const accounts: Account[] = (accountsData as { data?: Account[] })?.data ?? [];
   const opps: Opportunity[] = Array.isArray(opportunities) ? opportunities : [];
+  const activity: any[] = Array.isArray(activityData) ? activityData : [];
 
   return (
     <div className="space-y-6">
@@ -189,47 +191,81 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Opportunities Feed */}
-        <div className="card flex flex-col">
+        {/* Intelligence Feed */}
+        <div className="card flex flex-col h-[550px]">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="section-header">Priority Actions</h2>
-            <button onClick={() => refetchOpps()} className="p-1.5 rounded-lg hover:bg-matrix-paleBlue">
-              <RefreshCcw size={14} className="text-muted" />
-            </button>
+            <h2 className="section-header">Intelligence Feed</h2>
+            <div className="flex items-center gap-1">
+               <span className="text-[10px] font-bold text-matrix-blue bg-matrix-paleBlue px-2 py-0.5 rounded-full uppercase tracking-wider">AI Powered</span>
+               <button onClick={() => { refetchOpps(); refetchActivity(); }} className="p-1.5 rounded-lg hover:bg-matrix-paleBlue">
+                 <RefreshCcw size={14} className="text-muted" />
+               </button>
+            </div>
           </div>
-          {oppsLoading ? (
-            <div className="space-y-3 flex-1">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="animate-pulse h-16 bg-matrix-paleBlue rounded-lg" />
-              ))}
-            </div>
-          ) : opps.length === 0 ? (
-            <p className="text-sm text-muted text-center py-8">No priority actions right now</p>
-          ) : (
-            <div className="space-y-2 flex-1 overflow-y-auto max-h-[400px]">
-              {opps.slice(0, 10).map((opp, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-matrix-paleBlue/40 transition-colors"
-                >
-                  <PriorityBadge priority={opp.priority} className="flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-matrix-navy text-[13px] truncate">{opp.account_name}</div>
-                    <div className="text-[12px] text-body mt-0.5">{opp.message}</div>
-                    {opp.due_date && (
-                      <div className="text-[11px] text-muted mt-1">{formatDate(opp.due_date)}</div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => navigate(`/accounts/${opp.account_id}`)}
-                    className="text-matrix-blue text-[12px] font-medium hover:underline flex-shrink-0"
-                  >
-                    View →
-                  </button>
+          
+          <div className="flex-1 overflow-y-auto pr-2 space-y-6 custom-scrollbar">
+            {/* Priority Alerts */}
+            <div className="space-y-3">
+              <h3 className="text-[11px] font-bold text-muted uppercase tracking-widest border-b border-border pb-2">Critical Alerts</h3>
+              {oppsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2].map(i => <div key={i} className="animate-pulse h-16 bg-matrix-paleBlue rounded-xl" />)}
                 </div>
-              ))}
+              ) : opps.length === 0 ? (
+                <p className="text-[12px] text-muted italic px-2">No pending alerts</p>
+              ) : (
+                opps.map((opp, i) => (
+                  <div
+                    key={i}
+                    className="group flex items-start gap-3 p-3 rounded-xl border border-border hover:border-matrix-blue/30 hover:bg-matrix-paleBlue/20 transition-all"
+                  >
+                    <PriorityBadge priority={opp.priority} className="flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-matrix-navy text-[13px] truncate group-hover:text-matrix-blue transition-colors">{opp.account_name}</div>
+                      <div className="text-[12px] text-body mt-0.5 leading-snug">{opp.message}</div>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/accounts/${opp.account_id}`)}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-white shadow-sm border border-border text-matrix-blue transition-all"
+                    >
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
-          )}
+
+            {/* Recent Activity */}
+            <div className="space-y-3">
+              <h3 className="text-[11px] font-bold text-muted uppercase tracking-widest border-b border-border pb-2">Recent Interactions</h3>
+              {activityLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => <div key={i} className="animate-pulse h-12 bg-matrix-paleBlue rounded-xl" />)}
+                </div>
+              ) : activity.length === 0 ? (
+                <p className="text-[12px] text-muted italic px-2">No recent activity</p>
+              ) : (
+                activity.map((act, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 p-3 rounded-xl hover:bg-matrix-paleBlue/20 transition-colors"
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${act.type === 'visit' ? 'bg-green-50 text-health-green' : 'bg-blue-50 text-matrix-blue'}`}>
+                      {act.type === 'visit' ? <Building2 size={14} /> : <TicketCheck size={14} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-matrix-navy text-[12px] truncate">{act.account_name}</span>
+                        <span className="text-[10px] text-muted whitespace-nowrap">{formatDate(act.date)}</span>
+                      </div>
+                      <div className="text-[11px] font-medium text-body mt-0.5">{act.title}</div>
+                      <div className="text-[11px] text-muted mt-0.5 line-clamp-1">{act.subtitle}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

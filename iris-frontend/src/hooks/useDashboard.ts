@@ -19,3 +19,12 @@ export function useDashboardOpportunities() {
     staleTime: 60_000,
   });
 }
+
+export function useDashboardActivity() {
+  return useQuery({
+    queryKey: ['dashboard', 'activity'],
+    queryFn: () =>
+      api.get('/dashboard/activity').then((r) => r.data.data ?? r.data),
+    staleTime: 30_000,
+  });
+}

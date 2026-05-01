@@ -84,3 +84,11 @@ export function useProducts(filters?: unknown) {
     staleTime: 5 * 60_000,
   });
 }
+
+export function useAdminReleases(filters?: unknown) {
+  return useQuery({
+    queryKey: QUERY_KEYS.releases(filters),
+    queryFn: () => api.get('/admin/releases', { params: filters as Record<string, unknown> }).then((r) => r.data.data ?? r.data),
+    staleTime: 30_000,
+  });
+}
